@@ -16,17 +16,14 @@ library(data.table)
 advent_day <- "01"
 
 # load data
-puzzle <- read_lines(file = paste0("data/2024", advent_day, ".txt"))
+puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
 
 
 
-# CUSTOM FUNCTIONS --------------------------------------------------------
+# PART ONE ----------------------------------------------------------------
 
 
 
-
-
-# RESPONSE ----------------------------------------------------------------
-
+# PART TWO  ---------------------------------------------------------------
 
 
