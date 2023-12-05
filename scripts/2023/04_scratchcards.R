@@ -53,7 +53,7 @@ puzzle %>%
 # start with data.table
 dt %>% 
   
-  # points are 2 to the power of the count of common numbers - 1 (except for)
+  # points are 2 to the power of the count of common numbers less 1 (except for 0)
   .[, points := fifelse(count_common == 0, 0, 2^(count_common - 1))] %>% 
   
   # sum points
