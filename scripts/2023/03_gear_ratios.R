@@ -12,11 +12,9 @@
 library(tidyverse)
 library(data.table)
 
-# parameters
-advent_day <- "03"
 
 # load data
-puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
+puzzle <- read_lines(file = paste0("data/202303.txt"))
 
 
 

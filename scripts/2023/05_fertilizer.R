@@ -12,47 +12,8 @@
 library(tidyverse)
 library(data.table)
 
-# parameters
-advent_day <- "05"
-
 # load data
-puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
-
-# puzzle <- c(
-#   "seeds: 79 14 55 13",
-#   "",
-#   "seed-to-soil map:",
-#   "50 98 2",
-#   "52 50 48",
-#   "",
-#   "soil-to-fertilizer map:",
-#   "0 15 37",
-#   "37 52 2",
-#   "39 0 15",
-#   "",
-#   "fertilizer-to-water map:",
-#   "49 53 8",
-#   "0 11 42",
-#   "42 0 7",
-#   "57 7 4",
-#   "",
-#   "water-to-light map:",
-#   "88 18 7",
-#   "18 25 70",
-#   "",
-#   "light-to-temperature map:",
-#   "45 77 23",
-#   "81 45 19",
-#   "68 64 13",
-#   "",
-#   "temperature-to-humidity map:",
-#   "0 69 1",
-#   "1 0 69",
-#   "",
-#   "humidity-to-location map:",
-#   "60 56 37",
-#   "56 93 4"
-# )
+puzzle <- read_lines(file = paste0("data/202305.txt"))
 
 
 
@@ -61,7 +22,7 @@ puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
 # start with puzzle input
 puzzle %>% 
   
-  # get first element (seeds)
+  # get first row (contains info on seeds)
   head(1) %>% 
   
   # extract seed numbers
@@ -77,21 +38,21 @@ puzzle %>%
 # start with puzzle input
 puzzle %>% 
   
-  # remove first row
+  # remove first row (already handled seeds)
   tail(-1) %>% 
   
   # convert to data.table
   data.table(input = .) %>% 
   
   # create new column with mapping relationship
-  .[, c("map_from", "map_to") := tstrsplit(x = input, "-to-")] %>% 
+  .[, c("cat_from", "cat_to") := tstrsplit(x = input, "-to-")] %>% 
   
-  # clean-up
-  .[, map_from := fifelse(is.na(map_to), NA_character_, map_from)] %>% 
-  .[, map_to   := str_remove_all(string = map_to, pattern = " map:")] %>% 
+  # clean-up columns
+  .[, cat_from := fifelse(is.na(cat_to), NA_character_, cat_from)] %>%
+  .[, cat_to := NULL] %>% 
   
   # fill values down
-  tidyr::fill(map_from, map_to, .direction = "down") %>% 
+  tidyr::fill(cat_from, .direction = "down") %>% 
   
   # remove rows without number data
   .[str_detect(string = input, pattern = "\\d")] %>% 
@@ -105,32 +66,130 @@ puzzle %>%
   # create dest_end and source_end
   .[, `:=`(dest_end = dest_start + range_len - 1, source_end = source_start + range_len - 1)] %>% 
   
+  # sort data
+  .[order(cat_from, source_start)] %>% 
+  
+  # retain required columns
+  .[, .(cat_from, source_start, source_end, dest_start, dest_end)] %>% 
+  
   # save as data.table
   force() -> dt
  
-# create vector with order of mapped pairings 
-v_map_order <- c(
-  "seed",
-  "soil",
-  "fertilizer",
-  "water",
-  "light",
-  "temperature",
-  "humidity",
-  "location"
-)
 
-# create short version of data.table
-dtx <- dt[, .(map_from, source_start, source_end, dest_start, dest_end)]
+# create vector with order of mapped pairings 
+v_map_order <- c("seed", "soil", "fertilizer", "water", "light", "temperature", "humidity")
+
+# global min
+v_global_min <- dt[, min(source_start)]
+v_global_max <- dt[, max(source_end)]
+
+
+# include rows at the start and end to ensure global min and max are covered
+# bind rows
+rbindlist(
+  l = list(
+    
+    # row that goes before
+    map(
+      .x = v_map_order,
+      .f = function(z) {
+        
+        dt0 <- dt[cat_from == z][1]
+        
+        dt0_min <- dt0$source_start
+        
+        if (dt0_min > v_global_min) {
+          data.table(
+            cat_from     = z,
+            source_start = v_global_min,
+            source_end   = dt0_min - 1,
+            dest_start   = v_global_min,
+            dest_end     = dt0_min - 1
+          )
+        } else {dt0[FALSE]} # return empty data.table if not required
+        
+      }
+    ) %>% 
+      
+      rbindlist(),
+    
+    # rows that goes after
+    map(
+      .x = v_map_order,
+      .f = function(z) {
+        
+        dt0 <- dt[cat_from == z][.N]
+        
+        dt0_max <- dt0$source_end
+        
+        if (dt0_max < v_global_max) {
+          data.table(
+            cat_from     = z,
+            source_start = dt0_max + 1,
+            source_end   = v_global_max,
+            dest_start   = dt0_max + 1,
+            dest_end     = v_global_max
+          )
+        } else {dt0[FALSE]} # return empty data.table if not required
+        
+      }
+    ) %>% 
+      
+      rbindlist(),
+    
+    # original data.table
+    dt
+    
+  )
+) %>% 
+  
+  # reorder
+  .[order(cat_from, source_start)] %>% 
+  
+  # save as new data.table
+  force() -> dtx
+
+
+# however, there are still gaps (in-between rows)
+# start with data.table
+dtx %>% 
+  
+  # create copy (to avoid overwrite)
+  data.table::copy() %>% 
+  
+  # identify gaps between rows
+  .[, lag_x := lead(source_start) - source_end, by = .(cat_from)] %>% 
+  
+  # create new columns for loading
+  .[, `:=`(newstart = source_end + 1, newend = lead(source_start) - 1)] %>% 
+  
+  # remove rows that do not have gaps
+  .[!is.na(lag_x)] %>% 
+  .[lag_x > 1] %>% 
+  
+  # keep required columns
+  .[, .(cat_from, source_start = newstart, source_end = newend, dest_start = newstart, dest_end = newend)] %>% 
+  
+  # save data.table as variable
+  force() -> dtx_missing
+  
+
+# bind rows together
+rbindlist(l = list(dtx, dtx_missing)) %>% 
+  
+  # reorder
+  .[order(cat_from, source_start)] %>% 
+  
+  # save as new data.table
+  force() -> dtx_full
+
 
 
 # PART ONE ----------------------------------------------------------------
 
-x <- c()
-i <- 1
-
-my_fun <- function(nbr_from0, map_from0, dt0 = dtx) {
-  x0 <- dt0[map_from == map_from0 & source_start <= nbr_from0 & source_end >= nbr_from0]
+# create function to extract require destination value based on inputs
+my_fun <- function(nbr_from0, cat_from0, dt0 = dtx_full) {
+  x0 <- dt0[cat_from == cat_from0 & source_start <= nbr_from0 & source_end >= nbr_from0]
   if (nrow(x0) == 0) {nbr_from0} else {x0[, dest_start + (nbr_from0 - source_start)]}
 }
 
@@ -144,10 +203,89 @@ map_dbl(
     my_fun(v_map_order[4]) %>% 
     my_fun(v_map_order[5]) %>% 
     my_fun(v_map_order[6]) %>% 
-    my_fun(v_map_order[7]) %>% 
-    my_fun(v_map_order[8])
+    my_fun(v_map_order[7])
 ) %>% 
   
   # lowest number
   min()
   
+
+
+# PART TWO ----------------------------------------------------------------
+
+# unable to proceed with 'part 1' solution --> too many loops for brute force;
+# instead return a table with start and stop values
+
+# get odd number sequence
+v_seq <- seq(from = 1, to = length(v_seeds) - 1, by = 2)
+
+# create data.table to store seed information
+data.table(
+  seed_start = v_seeds[v_seq],
+  seed_len   = v_seeds[v_seq + 1]
+) %>% 
+  
+  # add column for seed end
+  .[, seed_end := seed_start + seed_len] %>% 
+  
+  # remove length column
+  .[, seed_len := NULL] %>% 
+  
+  # save data.table as variable
+  force() -> dt_seed
+
+
+my_fun2 <- function(nbr_from0, nbr_to0, cat_from0, dt0 = dtx_full) {
+  
+  # start with data.table
+  dt0 %>% 
+    
+    # filter to the matching rows
+    .[
+      cat_from == cat_from0 & 
+        (
+          (source_start <= nbr_from0 & source_end >= nbr_from0) | 
+          (source_start <= nbr_to0   & source_end >= nbr_to0)
+        )
+    ] %>% 
+    
+    # find start and end numbers that line up
+    .[
+      ,
+      `:=`(
+        seed_source_start = fifelse(source_start >= nbr_from0, source_start, nbr_from0),
+        seed_source_end   = fifelse(source_end   <= nbr_to0,   source_end,   nbr_to0)
+      )
+    ] %>% 
+    
+    # get the amount of digits required to scale up
+    .[
+      , 
+      `:=`(
+        seed_start = dest_start + (seed_source_start - source_start),
+        seed_end   = dest_end   + (seed_source_end   - source_end)
+      )
+    ] %>% 
+    
+    .[, .(seed_start, seed_end)] %>% 
+    
+    .[]
+}
+
+# brute force approach, but one loop per seed start and end
+map_dbl(
+  .x = 1:nrow(dt_seed),
+  .f = ~ dt_seed[.x] %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[1])) %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[2])) %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[3])) %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[4])) %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[5])) %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[6])) %>% 
+    map2_df(.x = .$seed_start, .y = .$seed_end, .f = ~ my_fun2(nbr_from0 = .x, nbr_to0 = .y, cat_from0 = v_map_order[7])) %>% 
+    
+    .[, min(seed_start)]
+) %>% 
+  
+  # lowest number
+  min()
