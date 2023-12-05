@@ -18,6 +18,10 @@ advent_day <- "01"
 # load data
 puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
 
+
+
+# DATA PREP ---------------------------------------------------------------
+
 # numbers lookup table
 dt <- data.table(
   chr = c("one", "two", "three", "four", "five", "six", "seven", "eight", "nine"),

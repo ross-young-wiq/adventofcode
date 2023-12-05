@@ -1,7 +1,7 @@
 
 # INTRO -------------------------------------------------------------------
 
-# Title:  x
+# Title:  00 xxxxxxxxxxxxxxxx
 # Author: Ross Young
 
 
@@ -13,10 +13,14 @@ library(tidyverse)
 library(data.table)
 
 # parameters
-advent_day <- "01"
+advent_day <- "00"
 
 # load data
 puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
+
+
+
+# DATA PREP ---------------------------------------------------------------
 
 
 

@@ -1,7 +1,7 @@
 
 # INTRO -------------------------------------------------------------------
 
-# Title:  x
+# Title:  04 Scratchcards
 # Author: Ross Young
 
 
@@ -20,7 +20,7 @@ puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
 
 
 
-# CLEANUP -----------------------------------------------------------------
+# DATA PREP ---------------------------------------------------------------
 
 # start with puzzle input
 puzzle %>% 
@@ -28,7 +28,7 @@ puzzle %>%
   # convert to data.table
   data.table(input = .) %>% 
   
-  # separate into three columns
+  # separate into three columns (separator is colon : or pipe |)
   .[, c("card", "winners", "nbrs") := tstrsplit(input, "[:|]")] %>% 
   
   # convert card to integer
@@ -53,7 +53,7 @@ puzzle %>%
 # start with data.table
 dt %>% 
   
-  # points are 2 to the power of the count of common numbers - 1
+  # points are 2 to the power of the count of common numbers - 1 (except for)
   .[, points := fifelse(count_common == 0, 0, 2^(count_common - 1))] %>% 
   
   # sum points
@@ -85,7 +85,7 @@ for (i in 1:nrow(dt_short)) {
   y <- c(
     rep(0, times = i),                             # repeat 0 up to and including the loop_id
     rep(x[i], times = dt_short[i, count_common]),  # repeat the number of cards for the loop_id, by the number of count_common
-    rep(0, times = nrow(dt_short))                 # repeat 0 to fill the rest of the vector
+    rep(0, times = nrow(dt_short))                 # repeat 0 to overfill the rest of the vector
   )
   
   # abbreviate the vector to be the right length
