@@ -20,7 +20,7 @@ puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
 
 
 
-# CLEANING ----------------------------------------------------------------
+# DATA PREP ---------------------------------------------------------------
 
 # start with puzzle input
 puzzle %>% 

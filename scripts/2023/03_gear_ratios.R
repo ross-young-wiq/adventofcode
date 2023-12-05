@@ -1,7 +1,7 @@
 
 # INTRO -------------------------------------------------------------------
 
-# Title:  02 Cube Conundrum
+# Title:  03 Gear Ratios
 # Author: Ross Young
 
 
@@ -20,7 +20,7 @@ puzzle <- read_lines(file = paste0("data/2023", advent_day, ".txt"))
 
 
 
-# CLEANING ----------------------------------------------------------------
+# DATA PREP ---------------------------------------------------------------
 
 # start with puzzle input
 puzzle %>%
@@ -37,19 +37,20 @@ puzzle %>%
       .[, row_id := as.integer(row_id)]  # convert row_id to integer
   ) %>% 
   
-  # assign names to each list element (1) numbesr and (2) symbols
+  # assign names to each list element (1) numbers and (2) symbols
   set_names("nbr", "sym") %>% 
   
   # save variable as data.table
   force() -> lst_input
 
+
 # start with number data
 lst_input$nbr %>% 
   
-  # add row_length (confirming that all are 140 characters long)
+  # add row_length (note: confirmed that all are 140 characters long)
   .[, row_length := unique(map_int(puzzle, str_length))] %>%
   
-  # create adjusted columns
+  # create adjusted columns (need these to compare adjacent values --> there is a one row + column buffer in each direction)
   .[
     , 
     `:=`(
@@ -70,6 +71,7 @@ lst_input$nbr %>%
   force() -> dt_nbr
 
 
+# brute force method:
 # create a cross-join with numerical data location and symbol location
 merge.data.table(
   x = dt_nbr[, join_key := 1],
@@ -91,7 +93,7 @@ merge.data.table(
 # start with data.table
 dt_result %>% 
   
-  # count rows that meet the filter for each numerical value
+  # count rows that meet the filter condition for each numerical value
   .[, .(N = sum(filter_flag, na.rm = TRUE)), by = .(nbr)] %>% 
   
   # remove numbers with no symbol matches
@@ -110,7 +112,7 @@ dt_result %>%
   # keep rows where filter flag is TRUE
   .[filter_flag == TRUE] %>% 
   
-  # sum count of rows and the product of the number
+  # sum count of rows and the product of the number for each number (make unique by grouping row_id, start and end)
   .[, .(n_count = .N, prod_nbr = prod(nbr)), by = .(row_id, start, end)] %>% 
   
   # filter to where the row count is exactly two
