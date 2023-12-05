@@ -173,7 +173,7 @@ rbindlist(
 # PART ONE ----------------------------------------------------------------
 
 # create function to extract require destination value based on inputs
-my_fun <- function(nbr_from0, cat_from0, dt0 = dtx_full) {
+my_fun <- function(nbr_from0, cat_from0, dt0 = dtx) {
   x0 <- dt0[cat_from == cat_from0 & source_start <= nbr_from0 & source_end >= nbr_from0]
   if (nrow(x0) == 0) {nbr_from0} else {x0[, dest_start + (nbr_from0 - source_start)]}
 }
@@ -218,7 +218,7 @@ data.table(
   force() -> dt_seed
 
 
-my_fun2 <- function(nbr_from0, nbr_to0, cat_from0, dt0 = dtx_full) {
+my_fun2 <- function(nbr_from0, nbr_to0, cat_from0, dt0 = dtx) {
   
   # start with data.table
   dt0 %>% 
