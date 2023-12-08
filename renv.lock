@@ -744,6 +744,14 @@
         "lattice"
       ]
     },
+    "numbers": {
+      "Package": "numbers",
+      "Version": "0.8-5",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "444385b56d92d4a269ba65d443beb250",
+      "Requirements": []
+    },
     "openssl": {
       "Package": "openssl",
       "Version": "2.1.1",
