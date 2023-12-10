@@ -48,71 +48,63 @@ v_puz %>%
 
 
 # create lookup table for directions
-tribble(
-  ~move  , ~x, ~y,
-  "left" ,  0, -1,
-  "right",  0, +1,
-  "down" , +1,  0,
-  "up"   , -1,  0
+data.table(
+  move = c("L", "R", "D", "U"),
+  x    = c(  0,   0,  +1,  -1),
+  y    = c( -1,  +1,   0,   0)
 ) %>% 
   
-  # convert to data.table
-  as.data.table() %>% 
-  
   # save data.table as variable
-  force() -> dt_lkup
-
+  force() -> dt_dir
 
 # get starting coordinates of SNAKE
 start_x <- which(v_puz == "S") %/% len_col + 1
 start_y <- which(v_puz == "S") %%  len_col
 
-
 # set parameters
 i <- 0
 m <- c()
-movement <- "left"
-# movement <- "down"
+movement <- "L" # since the snake can go two ways, we explicitly set the starting direction
 
 
 
 # PART ONE ----------------------------------------------------------------
 
-# run loop
+# run loop (this takes around 20 seconds to run)
 repeat {
   
   # replace starting coordinates with movement direction
-  start_x <- start_x + dt_lkup[move == movement, x]
-  start_y <- start_y + dt_lkup[move == movement, y]
+  start_x <- start_x + dt_dir[move == movement, x]
+  start_y <- start_y + dt_dir[move == movement, y]
   
   # get new symbol
-  xx <- mat_puz[start_x, start_y]
+  new_sym <- mat_puz[start_x, start_y]
   
   # determine next movement based on current direction and new symbol
-  movement <- if (xx %chin% c("|", "-")) {movement} else
-        if (xx == "L" & movement == "down") {"right"} else
-          if (xx == "L" & movement == "left") {"up"} else
-            if (xx == "7" & movement == "right") {"down"} else
-              if (xx == "7" & movement == "up") {"left"} else
-                if (xx == "F" & movement == "up") {"right"} else
-                  if (xx == "F" & movement == "left") {"down"} else
-                    if (xx == "J" & movement == "right") {"up"} else
-                      if (xx == "J" & movement == "down") {"left"} else
-                        if (xx == ".") {"error"} else {"end"}
+  movement <- if (new_sym %chin% c("|", "-")) {movement} else
+  if (new_sym == "L" & movement == "D") {"R"} else
+  if (new_sym == "L" & movement == "L") {"U"} else
+  if (new_sym == "7" & movement == "R") {"D"} else
+  if (new_sym == "7" & movement == "U") {"L"} else
+  if (new_sym == "F" & movement == "U") {"R"} else
+  if (new_sym == "F" & movement == "L") {"D"} else
+  if (new_sym == "J" & movement == "R") {"U"} else
+  if (new_sym == "J" & movement == "D") {"L"} else
+  if (new_sym == ".") {"error"} else {"end"}
   
-  # save coordinates to vector
+  # save coordinates to vector (TODO: fix the 'growing the vector' approach - inefficient)
   m <- c(m, start_x, start_y)
+  
+  # increment by 1
+  i <- i + 1
   
   # if end of cycle, then break infinite loop
   if (movement == "end") {break}
   
-  # otherwise increment by 1
-  i <- i + 1
-  
 }
 
 # print result
-print((i + 1) / 2)
+print(i / 2)
 
 
 
@@ -152,24 +144,21 @@ v_puz %>%
   .[, pipe_id := fcoalesce(pipe_id, 0)] %>% 
   
   # NOTE: an interesting observation:
-  #   . count number of barriers encountered to the left (if even, then outside, if odd, then inside)
-  .[
-    , 
-    `:=`(
-      sum_pipe = cumsum(pipe_id == 1 & input == "|"),
-      sum_LJ   = cumsum(pipe_id == 1 & input %chin% c("L", "J", "S")),
-      sum_F7   = cumsum(pipe_id == 1 & input %chin% c("F", "7"))
-    ), 
-    by = .(row_id)
-  ] %>% 
+  #   . count the number of times you 'cross the path' between the left edge of grid and a specific point.
+  #   . if even, then you are outside
+  #   . if odd, then you are inside
   
-  # remove pipes
+  #   . to be inside the polygon, it's easier to think about your point being slightly above or slightly below the centre of the cell.
+  #   . if you're slightly above the centre of the cell, then moving left you will pass through "|" an "L" and "J" (also "S" because replace with "J")
+  #   . ignore "F" and "7" because your line will pass ABOVE these paths (because your line is slightly above the centre of the cell).
+  .[, sum_crossings := cumsum(pipe_id == 1 & input %chin% c("|", "L", "J", "S")), by = .(row_id)] %>% 
+  
+  # remove rows with pipes
   .[pipe_id == 0] %>% 
   
-  # count number of barriers encountered
-  .[((sum_pipe + sum_LJ) %% 2 == 1) | ((sum_pipe + sum_F7) %% 2 == 1)] %>% 
+  # keep rows where the number of 'paths crossed' is odd
+  .[sum_crossings %% 2 == 1] %>%
   
   # count rows
   nrow()
-
 
