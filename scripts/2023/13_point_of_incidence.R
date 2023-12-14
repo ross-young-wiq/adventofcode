@@ -70,17 +70,17 @@ map_dbl(
           {which(.) - 1} %>% 
           
           # save output as variable
-          force() -> xx
+          force() -> v_matches
         
         # get multiplier based on row or column match
-        yy <- if (MIRROR_ID == 1) {100} else {1}
+        v_mult <- if (MIRROR_ID == 1) {100} else {1}
         
         # if no matches are found then return 0
-        if (length(xx) == 0) {NA_real_} else {
+        if (length(v_matches) == 0) {NA_real_} else {
           
           # loop over each possible match
           map_dbl(
-            .x = xx,
+            .x = v_matches,
             .f = function(x) {
               
               {
@@ -93,8 +93,8 @@ map_dbl(
                 
               } %>% 
                 
-                # if match fulfils condition, then return the match value, otherwise NULL
-                {if (. == TRUE) {yy * x} else {NA_real_}}
+                # if match fulfils condition, then return the match value, otherwise NA
+                {if (. == TRUE) {v_mult * x} else {NA_real_}}
             }
           ) %>% 
             
@@ -111,7 +111,8 @@ map_dbl(
 ) %>% 
   
   # save as output
-  force() -> outpu
+  force() -> output
+
 
 # add values
 sum(output)
