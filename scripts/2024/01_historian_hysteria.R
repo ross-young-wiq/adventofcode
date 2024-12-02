@@ -20,30 +20,22 @@ puzzle <- read_lines(file = paste0("data/202401.txt"))
 # DATA PREP ---------------------------------------------------------------
 
 # split input into two pieces
-str_split(string = puzzle, pattern = "   ", n = 2, simplify = TRUE) %>%
-  
-  # convert matrix to data.table
-  as.data.table() %>%
-  
-  # convert datatype to numeric
-  .[, lapply(.SD, as.numeric)] %>%
-  
-  # save data.table as variable
-  force() -> dt
+x <- str_split(string = puzzle, pattern = "   ", n = 2, simplify = TRUE)
+
+# create a frequency table with values in second column
+y <- table(x[, 2])
 
 
 
 # PART ONE ----------------------------------------------------------------
 
 # sort each column independently, take sum of absolute difference
-sum(abs(sort(dt[, V1]) - sort(dt[, V2])))
+sum(abs(sort(as.numeric(x[, 1])) - sort(as.numeric(x[, 2]))))
 
 
 
 # PART TWO  ---------------------------------------------------------------
 
 # multiply value in first column by frequency in second column, then take sum
-sum(map_dbl(.x = dt[, V1], .f = ~ .x * sum(.x == dt[, V2])))
-
-
+sum(map_dbl(.x = x[, 1], .f = ~ coalesce(as.numeric(.x) * y[.x], 0)))
 
